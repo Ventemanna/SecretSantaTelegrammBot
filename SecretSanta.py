@@ -23,7 +23,7 @@ def main_menu(message):
     btn3 = types.KeyboardButton("Refresh")
     btn5 = types.KeyboardButton("Узнать кто у меня")
     markup.add(btn1, btn2, btn3, btn4, btn5)
-    bot.send_message(message.chat.id, "Что хочешь?",reply_markup=markup )
+    bot.send_message(message.chat.id, "?", reply_markup=markup)
 
 @bot.message_handler(content_types=['text'])
 def func(message):
@@ -167,9 +167,10 @@ def db_insert_description(message):
     description = message.text
     if description == "Назад":
         main_menu(message)
-    student_id = message.from_user.id
-    cursor.execute('UPDATE Student21 SET description = (?) WHERE id_student = (?)', (description, student_id))
-    conn.commit()
+    else:
+        student_id = message.from_user.id
+        cursor.execute('UPDATE Student21 SET description = (?) WHERE id_student = (?)', (description, student_id))
+        conn.commit()
 
 
 def look_at_description(message):
