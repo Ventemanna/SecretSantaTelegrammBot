@@ -11,6 +11,11 @@ cursor = conn.cursor()
 
 @bot.message_handler(commands=['start'])
 def start_message(message):
+    bot.send_message(message.chat.id, 'Привет! Это Бот для тайного санты')
+    main_menu(message)
+
+
+def main_menu(message):
     markup = types.ReplyKeyboardMarkup(resize_keyboard=True)
     btn1 = types.KeyboardButton("Учавствовать!")
     btn2 = types.KeyboardButton("Участники")
@@ -18,8 +23,7 @@ def start_message(message):
     btn3 = types.KeyboardButton("Refresh")
     btn5 = types.KeyboardButton("Узнать кто у меня")
     markup.add(btn1, btn2, btn3, btn4, btn5)
-    bot.send_message(message.chat.id, 'Привет! Это Бот для тайного санты', reply_markup=markup)
-
+    bot.send_message(message.chat.id, "Что хочешь?",reply_markup=markup )
 
 @bot.message_handler(content_types=['text'])
 def func(message):
@@ -28,8 +32,8 @@ def func(message):
         add_student_to_db(message)
     elif message.text == "Участники":
         print_students(message)
-    elif message.text == "Refresh":
-        start_message(message)
+    elif message.text == "Refresh" or message.text == "Назад":
+        main_menu(message)
     elif message.text == "Сгенерировать":
         generate(message)
     elif message.text == "/addDescription" or message.text == "Описание":
@@ -38,6 +42,10 @@ def func(message):
         reset_db(message)
     elif message.text == "Узнать кто у меня":
         print_student(message)
+    elif message.text == "Изменить":
+        change_description(message)
+    elif message.text == "Посмотреть":
+        look_at_description(message)
     else:
         bot.send_message(message.chat.id, f"{message.from_user.first_name}, не балуйся!")
 
@@ -68,7 +76,6 @@ def generate(message):
 def generate_allow():
     cursor.execute("SELECT COUNT(id) FROM Student21 WHERE is_available = 1")
     without_santas = (cursor.fetchall()[0])[0]
-    print(without_santas)
     if without_santas == 0:
         return 0
     return 1
@@ -90,6 +97,7 @@ def select_random(message):
             change_index(st, len(student_list))
     generate(message)
 
+
 def change_index(student, counter: int):
     lenght = counter + 1
     while counter >= 0:
@@ -101,6 +109,7 @@ def change_index(student, counter: int):
         counter -= 1
     return 0
 
+
 def add_gift_to(student, index):
     cursor.execute(
         """UPDATE Student21 
@@ -111,13 +120,13 @@ def add_gift_to(student, index):
     conn.commit()
 
 
-
 def check_student(index: int):
     cursor.execute("SELECT name FROM Student21 WHERE id = (?) AND is_available = 1", (index,))
     result = cursor.fetchall()
     if result is None:
         return 0
     return 1
+
 
 def is_available(id_student: int):
     cursor.execute("SELECT name FROM Student21 WHERE id_student = (?) AND is_available = 1", (id_student,))
@@ -156,19 +165,41 @@ def db_insert_values(id_student: int, username: str, name: str):
 
 def db_insert_description(message):
     description = message.text
+    if description == "Назад":
+        main_menu(message)
     student_id = message.from_user.id
     cursor.execute('UPDATE Student21 SET description = (?) WHERE id_student = (?)', (description, student_id))
     conn.commit()
+
+
+def look_at_description(message):
+    student_id = message.from_user.id
+    cursor.execute('SELECT description FROM Student21 WHERE id_student = (?)', (student_id,))
+    description = cursor.fetchall()
+    bot.send_message(message.from_user.id, description[0])
 
 
 @bot.message_handler(commands=['addDescription'])
 def get_description(message):
     exist_description = is_empty_description(message)
     if exist_description == 1:
-        description = bot.send_message(message.from_user.id, 'Можешь написать что-нибудь для своего тайного санты')
-        bot.register_next_step_handler(description, db_insert_description)
+        change_description(message)
     elif exist_description == 0:
-        bot.send_message(message.from_user.id, 'У тебя уже есть описание!')
+        description_options(message)
+
+
+def change_description(message):
+    description = bot.send_message(message.from_user.id, 'Можешь написать что-нибудь для своего тайного санты')
+    bot.register_next_step_handler(description, db_insert_description)
+
+
+def description_options(message):
+    markup = types.ReplyKeyboardMarkup(resize_keyboard=True)
+    btn1 = types.KeyboardButton("Посмотреть")
+    btn2 = types.KeyboardButton("Изменить")
+    btn3 = types.KeyboardButton("Назад")
+    markup.add(btn1, btn2, btn3)
+    bot.send_message(message.chat.id, 'У тебя уже есть описание!', reply_markup=markup)
 
 
 def is_empty_description(message):
